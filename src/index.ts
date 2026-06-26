@@ -37,6 +37,39 @@ export default {
       return Response.json(refs);
     }
 
+    if (
+      request.method === "GET" &&
+      new URL(request.url).pathname === "/__browser-test"
+    ) {
+      try {
+        const response = await env.BROWSER.quickAction("content", {
+          url: "https://example.com",
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          return Response.json(
+            { success: false, status: response.status, error: text },
+            { status: 502 },
+          );
+        }
+        const html = await response.text();
+        return Response.json({
+          success: true,
+          url: "https://example.com",
+          contentLength: html.length,
+          preview: html.slice(0, 1000),
+        });
+      } catch (err) {
+        return Response.json(
+          {
+            success: false,
+            error: err instanceof Error ? err.message : String(err),
+          },
+          { status: 500 },
+        );
+      }
+    }
+
     return new Response("dummy-worker: ok", {
       headers: { "content-type": "text/plain" },
     });
